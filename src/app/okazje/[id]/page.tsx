@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MOCK_DEALS, MOCK_COMMENTS } from '@/data/mock-deals';
@@ -13,19 +13,13 @@ import {
   ExternalLink, 
   Copy, 
   Check, 
-  ThumbsUp, 
-  ThumbsDown, 
   CheckCircle2, 
   XCircle, 
   Sparkles, 
   Store, 
   Clock, 
-  Share2, 
-  ArrowLeft, 
   MessageSquare,
-  ShieldCheck,
   Send,
-  Lock
 } from 'lucide-react';
 
 export default function DealDetailPage() {
@@ -44,10 +38,10 @@ export default function DealDetailPage() {
 
   if (!deal) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-2xl font-black text-white mb-2">Okazja nie została znaleziona</h2>
-        <p className="text-slate-400 text-sm mb-6">Prawdopodobnie wygasła lub została usunięta.</p>
-        <Link href="/okazje" className="px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">
+      <div className="text-center py-24">
+        <h2 className="text-3xl font-black text-white mb-3">Okazja nie została znaleziona</h2>
+        <p className="text-slate-300 text-base mb-8">Prawdopodobnie wygasła lub została usunięta.</p>
+        <Link href="/okazje" className="px-6 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-sm">
           Wróć do listy okazji
         </Link>
       </div>
@@ -67,7 +61,7 @@ export default function DealDetailPage() {
     if (!newComment.trim()) return;
 
     setIsSubmittingComment(true);
-    const addedComment = {
+    const addedComment: Comment = {
       id: `c_${Date.now()}`,
       deal_id: deal.id,
       user_id: 'local_user',
@@ -85,22 +79,22 @@ export default function DealDetailPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-10 max-w-5xl mx-auto">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs text-slate-400">
+      <nav className="flex items-center gap-2 text-sm text-slate-300 font-medium">
         <Link href="/" className="hover:text-amber-400 transition-colors">Główna</Link>
         <span>/</span>
         <Link href="/okazje" className="hover:text-amber-400 transition-colors">Okazje</Link>
         <span>/</span>
-        <span className="text-slate-200 truncate">{deal.title}</span>
+        <span className="text-slate-100 font-semibold truncate">{deal.title}</span>
       </nav>
 
       {/* Main product box */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 sm:p-8">
+      <div className="bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 sm:p-10">
           {/* Left Column: Image */}
-          <div className="lg:col-span-5 flex flex-col gap-4">
-            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800">
+          <div className="lg:col-span-5 flex flex-col gap-5">
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-700">
               <Image
                 src={deal.image_url}
                 alt={deal.title}
@@ -109,19 +103,19 @@ export default function DealDetailPage() {
                 sizes="(max-width: 1024px) 100vw, 500px"
                 className="object-cover"
               />
-              <div className="absolute top-3 left-3">
+              <div className="absolute top-4 left-4">
                 <DealBadge type={deal.badge} />
               </div>
               {deal.discount_percent && deal.discount_percent > 0 ? (
-                <div className="absolute bottom-3 left-3 bg-rose-600 text-white font-black text-sm px-3 py-1 rounded-xl shadow-lg">
+                <div className="absolute bottom-4 left-4 bg-rose-600 text-white font-black text-base px-3.5 py-1.5 rounded-xl shadow-lg">
                   -{deal.discount_percent}%
                 </div>
               ) : null}
             </div>
 
             {/* Voting Bar in detail */}
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950 border border-slate-800">
-              <span className="text-xs text-slate-400 font-semibold">Temperatura okazji:</span>
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-700">
+              <span className="text-sm text-slate-200 font-bold">Temperatura okazji:</span>
               <VoteButtons
                 dealId={deal.id}
                 initialTemperature={deal.temperature}
@@ -135,31 +129,31 @@ export default function DealDetailPage() {
           <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
             <div>
               {/* Store & Date */}
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                <span className="inline-flex items-center gap-1 font-semibold text-slate-300">
-                  <Store className="w-3.5 h-3.5 text-amber-400" />
-                  Sklep: <strong>{deal.store_name}</strong>
+              <div className="flex items-center justify-between text-sm text-slate-300 mb-3 font-medium">
+                <span className="inline-flex items-center gap-2 text-slate-200 font-bold">
+                  <Store className="w-4 h-4 text-amber-400" />
+                  Sklep: <strong className="text-white">{deal.store_name}</strong>
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1.5 text-slate-400">
+                  <Clock className="w-4 h-4" />
                   Wrzuta Szwagra: {new Date(deal.created_at).toLocaleDateString('pl-PL')}
                 </span>
               </div>
 
               {/* Title */}
-              <h1 className="text-xl sm:text-2xl font-black text-white leading-snug">
+              <h1 className="text-2xl sm:text-3xl font-black text-white leading-snug">
                 {deal.title}
               </h1>
 
               {/* Price card */}
-              <div className="mt-4 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+              <div className="mt-5 p-5 rounded-2xl bg-slate-950 border border-slate-700 flex items-center justify-between">
                 <div>
-                  <div className="text-xs text-slate-400 font-semibold">Cena w tej okazji:</div>
-                  <div className="text-3xl font-black text-amber-400 tracking-tight">
+                  <div className="text-sm text-slate-300 font-bold">Cena w tej okazji:</div>
+                  <div className="text-3xl sm:text-4xl font-black text-amber-400 tracking-tight">
                     {formatPrice(deal.deal_price)}
                   </div>
                   {deal.original_price && deal.original_price > deal.deal_price && (
-                    <div className="text-xs text-slate-500 line-through">
+                    <div className="text-sm text-slate-400 line-through font-medium">
                       Cena regularna: {formatPrice(deal.original_price)}
                     </div>
                   )}
@@ -167,26 +161,26 @@ export default function DealDetailPage() {
 
                 {deal.original_price && deal.original_price > deal.deal_price && (
                   <div className="text-right">
-                    <span className="text-xs text-emerald-400 font-bold block">
+                    <span className="text-sm sm:text-base text-emerald-400 font-black block">
                       Zaoszczędzisz: {formatPrice(deal.original_price - deal.deal_price)}
                     </span>
-                    <span className="text-[11px] text-slate-400">w Twojej kieszeni</span>
+                    <span className="text-xs sm:text-sm text-slate-300 font-medium">zostaje w Twojej kieszeni</span>
                   </div>
                 )}
               </div>
 
               {/* Coupon block */}
               {deal.coupon_code && (
-                <div className="mt-4 p-3 rounded-2xl bg-amber-500/10 border border-dashed border-amber-500/40 flex items-center justify-between gap-2">
+                <div className="mt-5 p-4 rounded-2xl bg-amber-500/10 border border-dashed border-amber-500/50 flex items-center justify-between gap-4">
                   <div>
-                    <span className="text-xs text-slate-300 block">Wpisz kod w koszyku:</span>
-                    <span className="font-mono text-base font-black text-amber-400">
+                    <span className="text-sm text-slate-200 font-medium block">Wpisz kod w koszyku:</span>
+                    <span className="font-mono text-lg font-black text-amber-400">
                       {deal.coupon_code}
                     </span>
                   </div>
                   <button
                     onClick={handleCopyCoupon}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm transition"
                   >
                     {copied ? (
                       <>
@@ -205,18 +199,18 @@ export default function DealDetailPage() {
             </div>
 
             {/* Direct CTA button to store */}
-            <div className="space-y-3">
+            <div className="space-y-3 pt-2">
               <a
                 href={deal.deal_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.01]"
+                className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.01]"
               >
                 <span>Przejdź do oferty w sklepie ({deal.store_name})</span>
                 <ExternalLink className="w-5 h-5" />
               </a>
 
-              <p className="text-[11px] text-slate-500 text-center">
+              <p className="text-xs sm:text-sm text-slate-400 text-center font-medium">
                 Link przekierowuje bezpośrednio do sprawdzonego sprzedawcy.
               </p>
             </div>
@@ -225,51 +219,51 @@ export default function DealDetailPage() {
       </div>
 
       {/* Szwagier In-Depth Review Section */}
-      <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
-        <div className="flex items-center gap-2 pb-4 border-b border-slate-800">
-          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
-            <Sparkles className="w-5 h-5" />
+      <section className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-10 space-y-8 shadow-xl">
+        <div className="flex items-center gap-3 pb-6 border-b border-slate-800">
+          <div className="p-3 rounded-2xl bg-amber-500/15 text-amber-400">
+            <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-white">
+            <h2 className="text-xl sm:text-2xl font-black text-white">
               Opinia i test z warsztatu Szwagra
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm text-slate-300 font-medium">
               Szczera ocena bez marketingu – co ten sprzęt potrafi, a czego nie dotykać
             </p>
           </div>
         </div>
 
         {/* Verdict callout */}
-        <div className="p-5 rounded-2xl bg-slate-950 border border-amber-500/30 relative">
-          <div className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2">
+        <div className="p-6 rounded-2xl bg-slate-950 border border-amber-500/40 relative">
+          <div className="text-sm font-black uppercase tracking-wider text-amber-400 mb-3">
             Werdykt Szwagra:
           </div>
-          <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed">
+          <p className="text-base sm:text-lg text-slate-100 italic leading-relaxed font-medium">
             &ldquo;{deal.szwagier_verdict}&rdquo;
           </p>
         </div>
 
         {/* Description */}
         <div>
-          <h3 className="text-sm font-bold text-slate-200 mb-2">Opis i specyfika sprzętu</h3>
-          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+          <h3 className="text-base sm:text-lg font-extrabold text-white mb-3">Opis i specyfika sprzętu</h3>
+          <p className="text-sm sm:text-base text-slate-200 leading-relaxed font-normal">
             {deal.description}
           </p>
         </div>
 
         {/* Pros & Cons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
           {/* Pros */}
-          <div className="p-5 rounded-2xl bg-emerald-950/20 border border-emerald-800/40">
-            <h4 className="text-sm font-black text-emerald-400 flex items-center gap-2 mb-3">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <div className="p-6 rounded-2xl bg-emerald-950/30 border border-emerald-700/50">
+            <h4 className="text-base font-black text-emerald-400 flex items-center gap-2.5 mb-4">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               Co Szwagier chwali (Zalety):
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {deal.pros.map((pro, index) => (
-                <li key={index} className="text-xs text-slate-300 flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">•</span>
+                <li key={index} className="text-sm sm:text-base text-slate-200 flex items-start gap-2.5 font-medium">
+                  <span className="text-emerald-400 font-black">•</span>
                   <span>{pro}</span>
                 </li>
               ))}
@@ -277,15 +271,15 @@ export default function DealDetailPage() {
           </div>
 
           {/* Cons */}
-          <div className="p-5 rounded-2xl bg-rose-950/20 border border-rose-800/40">
-            <h4 className="text-sm font-black text-rose-400 flex items-center gap-2 mb-3">
-              <XCircle className="w-4 h-4 text-rose-400" />
+          <div className="p-6 rounded-2xl bg-rose-950/30 border border-rose-700/50">
+            <h4 className="text-base font-black text-rose-400 flex items-center gap-2.5 mb-4">
+              <XCircle className="w-5 h-5 text-rose-400" />
               Do czego Szwagier się przyczepi (Minusy):
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {deal.cons.map((con, index) => (
-                <li key={index} className="text-xs text-slate-300 flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
+                <li key={index} className="text-sm sm:text-base text-slate-200 flex items-start gap-2.5 font-medium">
+                  <span className="text-rose-400 font-black">•</span>
                   <span>{con}</span>
                 </li>
               ))}
@@ -294,26 +288,26 @@ export default function DealDetailPage() {
         </div>
       </section>
 
-      {/* Community Comments & Discussion Section */}
-      <section id="komentarze" className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-amber-400" />
-            <h3 className="text-lg font-black text-white">
+      {/* Community Comments Section */}
+      <section id="komentarze" className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-10 space-y-8 shadow-xl">
+        <div className="flex items-center justify-between pb-6 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="w-6 h-6 text-amber-400" />
+            <h3 className="text-xl sm:text-2xl font-black text-white">
               Komentarze i opinie użytkowników ({comments.length})
             </h3>
           </div>
         </div>
 
         {/* Comment form */}
-        <form onSubmit={handleAddComment} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <form onSubmit={handleAddComment} className="p-6 rounded-2xl bg-slate-950 border border-slate-700 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
               type="text"
               placeholder="Twój pseudonim (np. Zdzichu_Warsztat)"
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400"
+              className="bg-slate-900 border border-slate-700 text-slate-100 text-sm font-medium rounded-xl px-4 py-2.5 focus:outline-none focus:border-amber-400 placeholder:text-slate-500"
             />
           </div>
 
@@ -322,20 +316,20 @@ export default function DealDetailPage() {
             placeholder="Napisz, co sądzisz o tym sprzęcie... Masz go w garażu? Sprawdza się?"
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-xl p-3 focus:outline-none focus:border-amber-400 resize-none"
+            className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm font-medium rounded-xl p-4 focus:outline-none focus:border-amber-400 resize-none placeholder:text-slate-500"
             required
           />
 
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-slate-500">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span className="text-xs sm:text-sm text-slate-400 font-medium">
               Komentarze są moderowane pod kątem kultury i spamu.
             </span>
             <button
               type="submit"
               disabled={isSubmittingComment}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition"
+              className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4" />
               <span>Dodaj komentarz</span>
             </button>
           </div>
@@ -346,22 +340,22 @@ export default function DealDetailPage() {
           {comments.map((comment) => (
             <div
               key={comment.id}
-              className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2"
+              className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5"
             >
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-200">{comment.username}</span>
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-extrabold text-white">{comment.username}</span>
                   {comment.is_vip && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-black border border-amber-500/30">
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-black border border-amber-500/40">
                       Złoty Szwagier VIP 👑
                     </span>
                   )}
                 </div>
-                <span className="text-slate-500 text-[11px]">
+                <span className="text-slate-400 text-xs sm:text-sm font-medium">
                   {new Date(comment.created_at).toLocaleDateString('pl-PL')}
                 </span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">{comment.content}</p>
+              <p className="text-sm sm:text-base text-slate-200 leading-relaxed font-normal">{comment.content}</p>
             </div>
           ))}
         </div>

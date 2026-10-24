@@ -12,36 +12,36 @@ export function DealBadge({ type, className }: BadgeProps) {
   switch (type) {
     case 'POLECENIE_SZWAGRA':
       return (
-        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-slate-950 shadow-sm', className)}>
-          <Trophy className="w-3.5 h-3.5 text-slate-950" />
+        <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold bg-amber-400 text-slate-950 shadow-md', className)}>
+          <Trophy className="w-4 h-4 text-slate-950 shrink-0" />
           Atest Szwagra 🏆
         </span>
       );
     case 'CEBULA_DEAL':
       return (
-        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm', className)}>
-          <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+        <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold bg-emerald-500 text-slate-950 shadow-md', className)}>
+          <Sparkles className="w-4 h-4 text-slate-950 shrink-0" />
           Cebula Deal 🧅
         </span>
       );
     case 'WOL_ROBOCZY':
       return (
-        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-amber-400 border border-slate-700 shadow-sm', className)}>
-          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+        <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold bg-slate-800 text-amber-300 border border-slate-600 shadow-md', className)}>
+          <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
           Wół Roboczy 🔨
         </span>
       );
     case 'BLAD_CENOWY':
       return (
-        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-600 text-white animate-pulse shadow-sm', className)}>
-          <AlertTriangle className="w-3.5 h-3.5 text-white" />
+        <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold bg-rose-600 text-white animate-pulse shadow-md', className)}>
+          <AlertTriangle className="w-4 h-4 text-white shrink-0" />
           Błąd Cenowy ⚡
         </span>
       );
     case 'HIT_DNIA':
       return (
-        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-600 text-white shadow-sm', className)}>
-          <Flame className="w-3.5 h-3.5 text-yellow-300" />
+        <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold bg-orange-500 text-slate-950 shadow-md', className)}>
+          <Flame className="w-4 h-4 text-slate-950 shrink-0" />
           Hit Dnia 🔥
         </span>
       );

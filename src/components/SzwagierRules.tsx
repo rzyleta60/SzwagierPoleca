@@ -27,11 +27,11 @@ export function SzwagierRules() {
 
   return (
     <section className="my-16">
-      <div className="text-center max-w-2xl mx-auto mb-10">
-        <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+      <div className="text-center max-w-2xl mx-auto mb-12">
+        <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
           Kodeks Szwagra: Dlaczego nam ufasz?
         </h2>
-        <p className="mt-2 text-xs sm:text-sm text-slate-400">
+        <p className="mt-3 text-sm sm:text-base text-slate-300">
           W internecie pełno jest sponsorowanych rankingów. U nas liczy się tylko jedno: czy narzędzie nie rozpadnie się przy pierwszym trudniejszym zadaniu.
         </p>
       </div>
@@ -42,13 +42,13 @@ export function SzwagierRules() {
           return (
             <div
               key={idx}
-              className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-amber-500/40 transition-all group"
+              className="p-7 rounded-2xl bg-slate-900 border border-slate-700 hover:border-amber-400 transition-all group shadow-md"
             >
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
-                <Icon className="w-6 h-6" />
+              <div className="w-13 h-13 p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-5 group-hover:scale-110 transition-transform">
+                <Icon className="w-7 h-7" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">{rule.title}</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">{rule.description}</p>
+              <h3 className="text-lg font-black text-white mb-2.5">{rule.title}</h3>
+              <p className="text-sm text-slate-200 leading-relaxed font-normal">{rule.description}</p>
             </div>
           );
         })}
