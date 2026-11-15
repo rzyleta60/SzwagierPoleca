@@ -57,6 +57,35 @@ export async function POST(req: Request) {
           console.warn('Ostrzeżenie przy aktualizacji profiles:', profileErr);
         }
 
+        // 3. Zapis zamówienia do historii zamówień użytkownika
+        const orderNumber = `SZW/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${Math.floor(1000 + Math.random() * 9000)}`;
+        const isYearly = targetPriceId.includes('year');
+        const planTitle = isYearly 
+          ? 'Klub Szwagra VIP – Pakiet Roczny (Oszczędzasz 40 zł)' 
+          : 'Klub Szwagra VIP – Pakiet Miesięczny (Alerty Telegram + Błędy cenowe)';
+        const planPrice = isYearly ? 199.00 : 19.99;
+
+        try {
+          await admin.from('orders').insert({
+            user_id: userId,
+            order_number: orderNumber,
+            total_amount: planPrice,
+            currency: 'PLN',
+            status: 'paid',
+            payment_method: 'Test Bez Stripe (1 kliknięcie)',
+            subscription_id: testSubId,
+            items: [
+              {
+                name: planTitle,
+                price: planPrice,
+                quantity: 1,
+              }
+            ],
+          });
+        } catch (orderErr) {
+          console.warn('Ostrzeżenie przy zapisie zamówienia testowego:', orderErr);
+        }
+
         return NextResponse.json({
           success: true,
           isVip: true,

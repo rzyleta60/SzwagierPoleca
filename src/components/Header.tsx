@@ -106,15 +106,19 @@ export function Header() {
           <div className="hidden sm:flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-slate-100">
-                  <User className="w-4 h-4 text-amber-400" />
+                <Link
+                  href="/konto"
+                  title="Moje konto i zamówienia"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-sm font-bold text-slate-100 transition-all group"
+                >
+                  <User className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
                   <span>{profile?.username || user.user_metadata?.username || user.email?.split('@')[0]}</span>
                   {isVip && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black">
                       VIP 👑
                     </span>
                   )}
-                </div>
+                </Link>
                 <button
                   onClick={handleSignOut}
                   title="Wyloguj się"
@@ -187,18 +191,27 @@ export function Header() {
           })}
           <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
             {user ? (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700">
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-100">
-                  <User className="w-4 h-4 text-amber-400" />
-                  <span>{profile?.username || user.user_metadata?.username || user.email?.split('@')[0]}</span>
-                  {isVip && <span className="text-[10px] px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black">VIP</span>}
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="text-xs font-bold text-rose-400 hover:text-rose-300"
+              <div className="flex flex-col gap-2">
+                <Link
+                  href="/konto"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between p-3.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 transition"
                 >
-                  Wyloguj
-                </button>
+                  <div className="flex items-center gap-2.5 text-sm font-bold text-slate-100">
+                    <User className="w-4 h-4 text-amber-400" />
+                    <span>Moje konto ({profile?.username || user.user_metadata?.username || user.email?.split('@')[0]})</span>
+                    {isVip && <span className="text-[10px] px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black">VIP 👑</span>}
+                  </div>
+                  <span className="text-xs text-amber-400 font-extrabold">Otwórz &rarr;</span>
+                </Link>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSignOut}
+                    className="text-xs font-bold text-rose-400 hover:text-rose-300 py-1 px-2"
+                  >
+                    Wyloguj się
+                  </button>
+                </div>
               </div>
             ) : (
               <Link
