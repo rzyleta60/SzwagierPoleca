@@ -31,9 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isVip, setIsVip] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkLocalTestVip = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('szwagier_test_vip') === 'true';
+  const checkLocalTestVip = (userId?: string) => {
+    if (typeof window !== 'undefined' && userId) {
+      return localStorage.getItem(`szwagier_test_vip_${userId}`) === 'true';
     }
     return false;
   };
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', currentUser.id)
         .single();
 
-      const hasLocalTestVip = checkLocalTestVip();
+      const hasLocalTestVip = checkLocalTestVip(currentUser.id);
 
       if (!error && data) {
         setProfile(data as UserProfile);
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.warn('Nie udało się pobrać profilu użytkownika:', err);
-      setIsVip(checkLocalTestVip());
+      setIsVip(checkLocalTestVip(currentUser.id));
     }
   };
 
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchProfile(currentUser);
       } else {
         setProfile(null);
-        setIsVip(checkLocalTestVip());
+        setIsVip(false);
       }
     } catch (err) {
       console.warn('Błąd podczas odświeżania profilu:', err);
@@ -96,11 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (enable) {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('szwagier_test_vip', 'true');
+        if (typeof window !== 'undefined' && user?.id) {
+          localStorage.setItem(`szwagier_test_vip_${user.id}`, 'true');
         }
         setIsVip(true);
       } else {
+        if (typeof window !== 'undefined' && user?.id) {
+          localStorage.removeItem(`szwagier_test_vip_${user.id}`);
+        }
         if (typeof window !== 'undefined') {
           localStorage.removeItem('szwagier_test_vip');
         }
@@ -115,10 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn('Błąd w toggleTestVip, fallback lokalny:', err);
       if (enable) {
-        if (typeof window !== 'undefined') localStorage.setItem('szwagier_test_vip', 'true');
+        if (typeof window !== 'undefined' && user?.id) {
+          localStorage.setItem(`szwagier_test_vip_${user.id}`, 'true');
+        }
         setIsVip(true);
       } else {
-        if (typeof window !== 'undefined') localStorage.removeItem('szwagier_test_vip');
+        if (typeof window !== 'undefined' && user?.id) {
+          localStorage.removeItem(`szwagier_test_vip_${user.id}`);
+        }
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('szwagier_test_vip');
+        }
         setIsVip(false);
       }
       return true;
@@ -129,10 +139,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-
-    if (checkLocalTestVip()) {
-      setIsVip(true);
-    }
 
     try {
       const supabase = createClient();
@@ -145,10 +151,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (mounted) setIsLoading(false);
           });
         } else {
+          setIsVip(false);
           setIsLoading(false);
         }
       }).catch(() => {
-        if (mounted) setIsLoading(false);
+        if (mounted) {
+          setIsVip(false);
+          setIsLoading(false);
+        }
       });
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -159,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await fetchProfile(currentUser);
         } else {
           setProfile(null);
-          setIsVip(checkLocalTestVip());
+          setIsVip(false);
         }
         setIsLoading(false);
       });
@@ -179,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const supabase = createClient();
       await supabase.auth.signOut();
       if (typeof window !== 'undefined') {
+        if (user?.id) localStorage.removeItem(`szwagier_test_vip_${user.id}`);
         localStorage.removeItem('szwagier_test_vip');
       }
       setUser(null);

@@ -1,74 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { Order } from '@/types';
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
 
+    if (!userId) {
+      return NextResponse.json({ orders: [] });
+    }
+
     const admin = createAdminClient();
 
-    let dbOrders: any[] = [];
-    if (userId) {
-      const { data, error } = await admin
-        .from('orders')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+    const { data, error } = await admin
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        dbOrders = data;
-      }
+    if (error) {
+      console.warn('Błąd podczas pobierania zamówień z bazy Supabase:', error);
+      return NextResponse.json({ orders: [] });
     }
 
-    // Jeśli w bazie są zamówienia użytkownika, zwróć je
-    if (dbOrders.length > 0) {
-      return NextResponse.json({ orders: dbOrders });
-    }
-
-    // Przykładowe zamówienia demonstracyjne dla profilu
-    const mockDemoOrders: Order[] = [
-      {
-        id: 'ord_demo_1',
-        user_id: userId || 'demo_user',
-        order_number: 'SZW/2026/10/4182',
-        total_amount: 19.99,
-        currency: 'PLN',
-        status: 'paid',
-        payment_method: 'BLIK (Stripe)',
-        subscription_id: 'sub_demo_active',
-        items: [
-          {
-            name: 'Klub Szwagra VIP – Dostęp miesięczny (Alerty Telegram + Błędy cenowe)',
-            price: 19.99,
-            quantity: 1,
-          },
-        ],
-        created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'ord_demo_2',
-        user_id: userId || 'demo_user',
-        order_number: 'SZW/2026/09/2089',
-        total_amount: 89.00,
-        currency: 'PLN',
-        status: 'paid',
-        payment_method: 'Karta Visa (Stripe)',
-        items: [
-          {
-            name: 'Zestaw magnetycznych organizerów warsztatowych SzwagierPro na klucze płasko-oczkowe',
-            price: 89.00,
-            quantity: 1,
-          },
-        ],
-        created_at: new Date(Date.now() - 48 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 48 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ];
-
-    return NextResponse.json({ orders: mockDemoOrders });
+    // Zwracamy wyłącznie rzeczywiste zamówienia przypisane do danego użytkownika
+    return NextResponse.json({ orders: data || [] });
   } catch (err: any) {
     console.error('Błąd w /api/orders:', err);
     return NextResponse.json({ orders: [] }, { status: 500 });
