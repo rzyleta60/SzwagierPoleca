@@ -5,7 +5,10 @@ export async function POST(req: Request) {
   try {
     const { customerId } = await req.json();
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const reqOrigin = req.headers.get('origin');
+    const reqHost = req.headers.get('host');
+    const proto = req.headers.get('x-forwarded-proto') || 'https';
+    const siteUrl = reqOrigin || (reqHost ? `${proto}://${reqHost}` : process.env.NEXT_PUBLIC_SITE_URL || 'https://szwagierpoleca.vercel.app');
 
     if (!customerId || !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('mock')) {
       return NextResponse.json({

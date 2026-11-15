@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -12,14 +12,56 @@ import {
   Menu, 
   X, 
   User, 
-  Tag
+  Tag,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 export function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState<any>(null);
+  const [isVip, setIsVip] = useState(false);
+
+  useEffect(() => {
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setUser(user);
+        if (user) {
+          supabase
+            .from('profiles')
+            .select('active_subscription_id')
+            .eq('id', user.id)
+            .single()
+            .then(({ data }) => {
+              if (data?.active_subscription_id) setIsVip(true);
+            });
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+      return () => subscription.unsubscribe();
+    } catch (e) {
+      // Ignoruj w razie braku konfiguracji klienta
+    }
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      setUser(null);
+      window.location.href = '/';
+    } catch (e) {
+      console.warn('Błąd wylogowania:', e);
+    }
+  };
 
   const navLinks = [
     { href: '/', label: 'Główna', icon: Flame },
@@ -97,13 +139,34 @@ export function Header() {
 
           {/* Right actions: Auth button */}
           <div className="hidden sm:flex items-center gap-3">
-            <Link
-              href="/auth/login"
-              className="flex items-center gap-2 text-sm font-bold text-slate-200 hover:text-white px-3.5 py-2.5 rounded-xl hover:bg-slate-900 transition-colors"
-            >
-              <User className="w-4 h-4" />
-              <span>Zaloguj</span>
-            </Link>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-slate-100">
+                  <User className="w-4 h-4 text-amber-400" />
+                  <span>{user.user_metadata?.username || user.email?.split('@')[0]}</span>
+                  {isVip && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black">
+                      VIP 👑
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  title="Wyloguj się"
+                  className="p-2.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-900 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="flex items-center gap-2 text-sm font-bold text-slate-200 hover:text-white px-3.5 py-2.5 rounded-xl hover:bg-slate-900 transition-colors"
+              >
+                <User className="w-4 h-4" />
+                <span>Zaloguj</span>
+              </Link>
+            )}
             <Link
               href="/vip"
               className="flex items-center gap-2 text-sm font-black bg-amber-500 hover:bg-amber-400 text-slate-950 px-5 py-2.5 rounded-xl shadow-lg shadow-amber-500/25 transition-all hover:scale-105"
@@ -158,13 +221,29 @@ export function Header() {
             );
           })}
           <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
-            <Link
-              href="/auth/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full text-center py-3 rounded-xl bg-slate-900 text-slate-100 text-base font-bold border border-slate-700"
-            >
-              Zaloguj się
-            </Link>
+            {user ? (
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-100">
+                  <User className="w-4 h-4 text-amber-400" />
+                  <span>{user.user_metadata?.username || user.email?.split('@')[0]}</span>
+                  {isVip && <span className="text-[10px] px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black">VIP</span>}
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="text-xs font-bold text-rose-400 hover:text-rose-300"
+                >
+                  Wyloguj
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/auth/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-3 rounded-xl bg-slate-900 text-slate-100 text-base font-bold border border-slate-700"
+              >
+                Zaloguj się
+              </Link>
+            )}
             <Link
               href="/vip"
               onClick={() => setMobileMenuOpen(false)}

@@ -6,7 +6,10 @@ export async function POST(req: Request) {
   try {
     const { priceId, planName, userId, userEmail } = await req.json();
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const reqOrigin = req.headers.get('origin');
+    const reqHost = req.headers.get('host');
+    const proto = req.headers.get('x-forwarded-proto') || 'https';
+    const siteUrl = reqOrigin || (reqHost ? `${proto}://${reqHost}` : process.env.NEXT_PUBLIC_SITE_URL || 'https://szwagierpoleca.vercel.app');
     const amount = priceId?.includes('yearly') ? 149.00 : 19.99;
     const amountCents = priceId?.includes('yearly') ? 14900 : 1999;
     const orderNumber = `SZW/${new Date().getFullYear()}/${Date.now().toString().slice(-6)}`;
