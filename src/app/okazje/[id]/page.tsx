@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MOCK_DEALS, MOCK_COMMENTS } from '@/data/mock-deals';
-import { Comment } from '@/types';
+import { Comment, Deal } from '@/types';
 import { DealBadge } from '@/components/Badge';
 import { VoteButtons } from '@/components/VoteButtons';
 import { formatPrice } from '@/lib/utils';
@@ -20,21 +20,62 @@ import {
   Clock, 
   MessageSquare,
   Send,
+  Lock,
+  Crown,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 export default function DealDetailPage() {
   const params = useParams();
   const slugOrId = params.id as string;
+  const { user, profile, isVip } = useAuth();
 
-  const deal = MOCK_DEALS.find((d) => d.slug === slugOrId || d.id === slugOrId);
-
+  const [deal, setDeal] = useState<Deal | null>(() => {
+    return MOCK_DEALS.find((d) => d.slug === slugOrId || d.id === slugOrId) || null;
+  });
   const [copied, setCopied] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(
-    MOCK_COMMENTS.filter((c) => c.deal_id === deal?.id || c.deal_id === '1')
-  );
+  const [comments, setComments] = useState<Comment[]>(() => {
+    return MOCK_COMMENTS.filter((c) => c.deal_id === deal?.id || c.deal_id === '1');
+  });
   const [newComment, setNewComment] = useState('');
-  const [authorName, setAuthorName] = useState('');
+  const [authorName, setAuthorName] = useState(profile?.username || user?.user_metadata?.username || '');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  useEffect(() => {
+    // Sprawdź czy okazja istnieje w Supabase (dla nowo dodanych okazji)
+    const fetchDeal = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('deals')
+          .select('*')
+          .or(`slug.eq.${slugOrId},id.eq.${slugOrId}`)
+          .single();
+
+        if (data) {
+          setDeal((prev) => ({
+            ...(prev || {}),
+            ...data,
+            pros: Array.isArray(data.pros) ? data.pros : (prev?.pros || []),
+            cons: Array.isArray(data.cons) ? data.cons : (prev?.cons || []),
+          } as Deal));
+        }
+      } catch (e) {
+        // Ignoruj błąd i użyj mock data
+      }
+    };
+
+    fetchDeal();
+  }, [slugOrId]);
+
+  useEffect(() => {
+    if (profile?.username) {
+      setAuthorName(profile.username);
+    }
+  }, [profile]);
 
   if (!deal) {
     return (
@@ -47,6 +88,8 @@ export default function DealDetailPage() {
       </div>
     );
   }
+
+  const isLockedForUser = deal.is_vip_only && !isVip;
 
   const handleCopyCoupon = () => {
     if (deal.coupon_code) {
@@ -64,9 +107,9 @@ export default function DealDetailPage() {
     const addedComment: Comment = {
       id: `c_${Date.now()}`,
       deal_id: deal.id,
-      user_id: 'local_user',
-      username: authorName.trim() || 'Majster_Anonim',
-      is_vip: false,
+      user_id: user?.id || 'local_user',
+      username: authorName.trim() || profile?.username || 'Majster_Garażowy',
+      is_vip: isVip,
       content: newComment.trim(),
       created_at: new Date().toISOString(),
     };
@@ -89,6 +132,38 @@ export default function DealDetailPage() {
         <span className="text-slate-100 font-semibold truncate">{deal.title}</span>
       </nav>
 
+      {/* VIP Locked Alert Banner for Non-VIP */}
+      {isLockedForUser && (
+        <div className="p-6 rounded-3xl bg-gradient-to-r from-amber-500/20 via-slate-900 to-amber-500/10 border-2 border-amber-400 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-400 flex items-center justify-center text-slate-950 shrink-0 shadow-lg shadow-amber-400/25">
+              <Crown className="w-8 h-8" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-black uppercase px-2.5 py-0.5 rounded bg-amber-400 text-slate-950 tracking-wider">
+                  Oferta Zastrzeżona
+                </span>
+                <span className="text-xs font-bold text-amber-300">Tylko dla Klubowiczów Szwagra VIP 👑</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black text-white">
+                Dostęp do linku i kodu rabatowego wymaga statusu VIP
+              </h3>
+              <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                Ta okazja to wyselekcjonowana perełka lub błąd cenowy. Jako użytkownik darmowego konta widzisz podgląd oferty. Aktywuj abonament VIP, aby natychmiast odblokować link do sklepu, kod zniżkowy oraz dostęp do grupy alertów.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/vip"
+            className="shrink-0 w-full md:w-auto px-7 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-base text-center shadow-xl shadow-amber-500/30 transition-all hover:scale-105 flex items-center justify-center gap-2"
+          >
+            <Crown className="w-5 h-5 text-slate-950" />
+            <span>Dołącz do VIP (od 19 zł)</span>
+          </Link>
+        </div>
+      )}
+
       {/* Main product box */}
       <div className="bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 sm:p-10">
@@ -103,14 +178,23 @@ export default function DealDetailPage() {
                 sizes="(max-width: 1024px) 100vw, 500px"
                 className="object-cover"
               />
-              <div className="absolute top-4 left-4">
+              <div className="absolute top-4 left-4 z-10">
                 <DealBadge type={deal.badge} />
               </div>
               {deal.discount_percent && deal.discount_percent > 0 ? (
-                <div className="absolute bottom-4 left-4 bg-rose-600 text-white font-black text-base px-3.5 py-1.5 rounded-xl shadow-lg">
+                <div className="absolute bottom-4 left-4 bg-rose-600 text-white font-black text-base px-3.5 py-1.5 rounded-xl shadow-lg z-10">
                   -{deal.discount_percent}%
                 </div>
               ) : null}
+
+              {isLockedForUser && (
+                <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] flex items-center justify-center p-4">
+                  <div className="px-4 py-2 rounded-2xl bg-slate-950/90 border border-amber-400/70 shadow-2xl flex items-center gap-2 text-amber-300 font-extrabold text-sm uppercase tracking-wider">
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span>Zablokowane w wersji darmowej</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Voting Bar in detail */}
@@ -176,48 +260,99 @@ export default function DealDetailPage() {
 
               {/* Coupon block */}
               {deal.coupon_code && (
-                <div className="mt-5 p-4 rounded-2xl bg-amber-500/10 border border-dashed border-amber-500/50 flex items-center justify-between gap-4">
-                  <div>
-                    <span className="text-sm text-slate-200 font-medium block">Wpisz kod w koszyku:</span>
-                    <span className="font-mono text-lg font-black text-amber-400">
-                      {deal.coupon_code}
-                    </span>
+                isLockedForUser ? (
+                  <div className="mt-5 p-5 rounded-2xl bg-amber-500/10 border-2 border-dashed border-amber-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
+                        <Lock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-300 font-bold uppercase tracking-wider block">
+                          Kod rabatowy (Zablokowany dla darmowych kont)
+                        </span>
+                        <span className="font-mono text-xl font-black text-amber-400/60 blur-[5px] select-none tracking-widest">
+                          SZWAGIER_VIP_CODE
+                        </span>
+                      </div>
+                    </div>
+                    <Link
+                      href="/vip"
+                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm text-center flex items-center justify-center gap-2 shadow-md transition"
+                    >
+                      <Crown className="w-4 h-4 text-slate-950" />
+                      <span>Odblokuj kod w VIP</span>
+                    </Link>
                   </div>
-                  <button
-                    onClick={handleCopyCoupon}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm transition"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4 text-slate-950" />
-                        <span>Skopiowano!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        <span>Kopiuj kod</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                ) : (
+                  <div className="mt-5 p-4 rounded-2xl bg-amber-500/10 border border-dashed border-amber-500/50 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-200 font-medium block">Wpisz kod w koszyku:</span>
+                        {deal.is_vip_only && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black">
+                            ODBLOKOWANO DLA VIP 👑
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono text-lg font-black text-amber-400">
+                        {deal.coupon_code}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleCopyCoupon}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm transition"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 text-slate-950" />
+                          <span>Skopiowano!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>Kopiuj kod</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )
               )}
             </div>
 
             {/* Direct CTA button to store */}
             <div className="space-y-3 pt-2">
-              <a
-                href={deal.deal_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.01]"
-              >
-                <span>Przejdź do oferty w sklepie ({deal.store_name})</span>
-                <ExternalLink className="w-5 h-5" />
-              </a>
+              {isLockedForUser ? (
+                <div className="space-y-3">
+                  <Link
+                    href="/vip"
+                    className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-base flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.01]"
+                  >
+                    <Lock className="w-5 h-5 text-slate-950" />
+                    <span>Odblokuj bezpośredni link do oferty w Klubie VIP</span>
+                    <Crown className="w-5 h-5 text-slate-950" />
+                  </Link>
 
-              <p className="text-xs sm:text-sm text-slate-400 text-center font-medium">
-                Link przekierowuje bezpośrednio do sprawdzonego sprzedawcy.
-              </p>
+                  <p className="text-xs sm:text-sm text-slate-400 text-center font-medium">
+                    Bezpośrednie linki i kody do okazji VIP są zastrzeżone dla aktywnych członków Klubu Szwagra.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <a
+                    href={deal.deal_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.01]"
+                  >
+                    <span>Przejdź do oferty w sklepie ({deal.store_name})</span>
+                    <ExternalLink className="w-5 h-5" />
+                  </a>
+
+                  <p className="text-xs sm:text-sm text-slate-400 text-center font-medium">
+                    Link przekierowuje bezpośrednio do sprawdzonego sprzedawcy.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -248,6 +383,24 @@ export default function DealDetailPage() {
             &ldquo;{deal.szwagier_verdict}&rdquo;
           </p>
         </div>
+
+        {/* VIP workshop tip teaser for non-VIP */}
+        {isLockedForUser && (
+          <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+              <p className="text-sm text-slate-200 font-medium">
+                🔒 Tajne wskazówki warsztatowe, bezpośredni namiar na hurtownika oraz alerty błędów cenowych na Telegramie są dostępne wyłącznie dla Klubowiczów VIP.
+              </p>
+            </div>
+            <Link
+              href="/vip"
+              className="text-xs font-black text-amber-400 hover:text-amber-300 uppercase tracking-wider shrink-0 underline"
+            >
+              Dowiedz się więcej &rarr;
+            </Link>
+          </div>
+        )}
 
         {/* Description */}
         <div>

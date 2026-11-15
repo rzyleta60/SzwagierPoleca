@@ -7,14 +7,17 @@ import { Deal } from '@/types';
 import { DealBadge } from './Badge';
 import { VoteButtons } from './VoteButtons';
 import { formatPrice } from '@/lib/utils';
-import { ExternalLink, Copy, Check, MessageSquare, Lock, Sparkles, Store } from 'lucide-react';
+import { ExternalLink, Copy, Check, MessageSquare, Lock, Sparkles, Store, Crown } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface DealCardProps {
   deal: Deal;
 }
 
 export function DealCard({ deal }: DealCardProps) {
+  const { isVip } = useAuth();
   const [copied, setCopied] = useState(false);
+  const isLockedForUser = deal.is_vip_only && !isVip;
 
   const copyCoupon = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,13 +44,23 @@ export function DealCard({ deal }: DealCardProps) {
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-black/70" />
 
+        {/* VIP Lock watermark overlay if user is not VIP */}
+        {isLockedForUser && (
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1.5px] flex items-center justify-center p-4">
+            <div className="px-3.5 py-1.5 rounded-xl bg-slate-950/90 border border-amber-400/60 shadow-xl flex items-center gap-2 text-amber-300 font-extrabold text-xs uppercase tracking-wider">
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Dostępne w Klubie VIP 👑</span>
+            </div>
+          </div>
+        )}
+
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
           <DealBadge type={deal.badge} />
           {deal.is_vip_only ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-black bg-amber-400 text-slate-950 shadow-md">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-md">
               <Lock className="w-3.5 h-3.5" />
-              TYLKO VIP
+              TYLKO VIP 👑
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-slate-950/80 backdrop-blur-md text-slate-200 border border-slate-700">
@@ -59,7 +72,7 @@ export function DealCard({ deal }: DealCardProps) {
 
         {/* Discount Tag */}
         {deal.discount_percent && deal.discount_percent > 0 ? (
-          <div className="absolute bottom-3 left-3 bg-rose-600 text-white font-black text-sm px-3 py-1 rounded-xl shadow-lg">
+          <div className="absolute bottom-3 left-3 bg-rose-600 text-white font-black text-sm px-3 py-1 rounded-xl shadow-lg z-10">
             -{deal.discount_percent}%
           </div>
         ) : null}
@@ -67,7 +80,7 @@ export function DealCard({ deal }: DealCardProps) {
         {/* Comments count */}
         <Link
           href={`/okazje/${deal.slug}#komentarze`}
-          className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs sm:text-sm font-bold bg-slate-950/90 backdrop-blur-md text-slate-200 hover:text-white border border-slate-700 hover:border-amber-400 transition-colors"
+          className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs sm:text-sm font-bold bg-slate-950/90 backdrop-blur-md text-slate-200 hover:text-white border border-slate-700 hover:border-amber-400 transition-colors z-10"
         >
           <MessageSquare className="w-4 h-4 text-amber-400" />
           <span>{deal.comments_count || 0}</span>
@@ -94,27 +107,44 @@ export function DealCard({ deal }: DealCardProps) {
 
         {/* Coupon Code Section */}
         {deal.coupon_code && (
-          <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-500/10 border border-dashed border-amber-500/50 rounded-xl">
-            <span className="text-sm font-semibold text-slate-200">
-              Kod rabatowy: <strong className="font-mono text-amber-400 text-base font-black">{deal.coupon_code}</strong>
-            </span>
-            <button
-              onClick={copyCoupon}
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 px-3 py-1 rounded-lg transition"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-800" />
-                  <span>Skopiowano</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Kopiuj</span>
-                </>
-              )}
-            </button>
-          </div>
+          isLockedForUser ? (
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-amber-500/10 border border-dashed border-amber-500/40 rounded-xl">
+              <span className="text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Kod rabatowy:</span>
+                <span className="font-mono text-amber-400/60 blur-[3px] select-none tracking-widest">••••••••</span>
+              </span>
+              <Link
+                href="/vip"
+                className="flex items-center gap-1 text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 px-3 py-1.5 rounded-lg transition shadow-sm"
+              >
+                <span>Odblokuj</span>
+                <Crown className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-500/10 border border-dashed border-amber-500/50 rounded-xl">
+              <span className="text-sm font-semibold text-slate-200">
+                Kod rabatowy: <strong className="font-mono text-amber-400 text-base font-black">{deal.coupon_code}</strong>
+              </span>
+              <button
+                onClick={copyCoupon}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 px-3 py-1 rounded-lg transition"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-800" />
+                    <span>Skopiowano</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Kopiuj</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )
         )}
 
         {/* Prices and Voting bar */}
@@ -151,15 +181,25 @@ export function DealCard({ deal }: DealCardProps) {
           >
             Opinia i test
           </Link>
-          <a
-            href={deal.deal_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-black transition-colors shadow-lg shadow-amber-500/20"
-          >
-            <span>Do sklepu</span>
-            <ExternalLink className="w-4 h-4" />
-          </a>
+          {isLockedForUser ? (
+            <Link
+              href="/vip"
+              className="flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 text-sm font-black transition-all shadow-lg shadow-amber-500/20 hover:scale-[1.02]"
+            >
+              <Crown className="w-4 h-4 text-slate-950" />
+              <span>Odblokuj w VIP</span>
+            </Link>
+          ) : (
+            <a
+              href={deal.deal_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-black transition-colors shadow-lg shadow-amber-500/20"
+            >
+              <span>Do sklepu</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          )}
         </div>
       </div>
     </article>

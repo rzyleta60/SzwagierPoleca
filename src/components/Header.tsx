@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -16,51 +16,16 @@ import {
   LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 export function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [user, setUser] = useState<any>(null);
-  const [isVip, setIsVip] = useState(false);
-
-  useEffect(() => {
-    try {
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        setUser(user);
-        if (user) {
-          supabase
-            .from('profiles')
-            .select('active_subscription_id')
-            .eq('id', user.id)
-            .single()
-            .then(({ data }) => {
-              if (data?.active_subscription_id) setIsVip(true);
-            });
-        }
-      });
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
-      });
-
-      return () => subscription.unsubscribe();
-    } catch (e) {
-      // Ignoruj w razie braku konfiguracji klienta
-    }
-  }, []);
+  const { user, profile, isVip, signOut } = useAuth();
 
   const handleSignOut = async () => {
-    try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      setUser(null);
-      window.location.href = '/';
-    } catch (e) {
-      console.warn('Błąd wylogowania:', e);
-    }
+    await signOut();
   };
 
   const navLinks = [
@@ -143,7 +108,7 @@ export function Header() {
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-slate-100">
                   <User className="w-4 h-4 text-amber-400" />
-                  <span>{user.user_metadata?.username || user.email?.split('@')[0]}</span>
+                  <span>{profile?.username || user.user_metadata?.username || user.email?.split('@')[0]}</span>
                   {isVip && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black">
                       VIP 👑
@@ -225,7 +190,7 @@ export function Header() {
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-100">
                   <User className="w-4 h-4 text-amber-400" />
-                  <span>{user.user_metadata?.username || user.email?.split('@')[0]}</span>
+                  <span>{profile?.username || user.user_metadata?.username || user.email?.split('@')[0]}</span>
                   {isVip && <span className="text-[10px] px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black">VIP</span>}
                 </div>
                 <button

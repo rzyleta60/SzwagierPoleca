@@ -9,32 +9,20 @@ import {
   ShieldCheck, 
   HelpCircle, 
   ArrowRight,
-  CreditCard
+  CreditCard,
+  ExternalLink
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 export default function VipPage() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { user, profile, isVip } = useAuth();
 
   const handleSubscribe = async (plan: Plan) => {
     try {
       setLoadingPlan(plan.id);
       setError(null);
-
-      // Pobierz aktualnego użytkownika z Supabase jeśli jest zalogowany
-      let currentUserId = undefined;
-      let currentUserEmail = undefined;
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          currentUserId = user.id;
-          currentUserEmail = user.email;
-        }
-      } catch (authErr) {
-        // Użytkownik niezalogowany
-      }
 
       const response = await fetch('/api/checkout', {
         method: 'POST',
@@ -42,8 +30,8 @@ export default function VipPage() {
         body: JSON.stringify({
           priceId: plan.priceId,
           planName: plan.name,
-          userId: currentUserId,
-          userEmail: currentUserEmail,
+          userId: user?.id,
+          userEmail: user?.email,
         }),
       });
 
@@ -60,6 +48,26 @@ export default function VipPage() {
       setError(err.message || 'Nie udało się połączyć z bramką Stripe.');
     } finally {
       setLoadingPlan(null);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      setError(null);
+      const response = await fetch('/api/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: profile?.stripe_customer_id,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      setError('Nie udało się otworzyć portalu rozliczeniowego Stripe.');
     }
   };
 
@@ -82,6 +90,29 @@ export default function VipPage() {
         <p className="text-base sm:text-lg text-slate-200 leading-relaxed font-normal">
           Średni czas życia błędu cenowego na elektronarzędzia to 22 minuty. Jako członek Klubu Szwagra VIP dostajesz powiadomienie natychmiast na swój telefon i zgarniasz sprzęt zanim sklep zorientuje się o pomyłce.
         </p>
+
+        {isVip && (
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-500/20 via-slate-900 to-amber-500/15 border-2 border-emerald-400 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 text-left">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-400 flex items-center justify-center text-slate-950 font-black shrink-0">
+                <Crown className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Twój dostęp VIP jest w pełni aktywny! 👑</h3>
+                <p className="text-sm text-slate-300">
+                  Wszystkie okazje, ukryte kody rabatowe i linki do sklepów są dla Ciebie odblokowane.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleManageSubscription}
+              className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-600 transition flex items-center gap-2 shrink-0"
+            >
+              <span>Zarządzaj subskrypcją</span>
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-sm font-bold">
