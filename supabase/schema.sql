@@ -253,7 +253,7 @@ CREATE POLICY "Komentarze są widoczne" ON public.comments FOR SELECT USING (tru
 CREATE POLICY "Zalogowani mogą komentować" ON public.comments FOR INSERT WITH CHECK (user_id = auth.uid());
 
 -- ====================================================================
--- PRZYKŁADOWE KATEGORIE POCZĄTKOWE
+-- PRZYKŁADOWE DANE POCZĄTKOWE (SEED DATA)
 -- ====================================================================
 INSERT INTO public.categories (id, name, description, icon) VALUES
 ('narzedzia', 'Narzędzia i Warsztat', 'Wkrętarki, młotowiertarki, klucze i sprzęt do garażu', 'Wrench'),
@@ -261,3 +261,47 @@ INSERT INTO public.categories (id, name, description, icon) VALUES
 ('dom-ogrod', 'Dom i Ogród', 'Kosiarki, sprzęt ogrodowy, naprawy domowe i hydraulika', 'Home'),
 ('elektronika', 'Elektronika i Gadżety', 'Multimetry, latarki taktyczne, akumulatory i gadżety', 'Zap')
 ON CONFLICT (id) DO NOTHING;
+
+-- Przykładowe okazje Szwagra
+INSERT INTO public.deals (id, title, slug, description, szwagier_verdict, pros, cons, original_price, deal_price, lowest_price_30_days, coupon_code, deal_url, image_url, store_name, badge, temperature, upvotes, downvotes, is_vip_only, is_featured)
+VALUES
+(
+    '11111111-1111-1111-1111-111111111111',
+    'Wkrętarka udarowa DeWalt DCD796 18V XR + 2x Aku 5.0Ah + Ładowarka i Kufer TSTAK',
+    'dewalt-dcd796-18v-xr-zestaw-2x5ah',
+    'Legendarny bezszczotkowy potwór od DeWalta. 70 Nm momentu obrotowego, metalowa przekładnia i dwa akumulatory 5Ah.',
+    'Panie, to nie jest zabawka z marketu za 120 zł co po trzech wkrętach w kantówkę dymi. Skręciłem nią całą altankę i więźbę u teścia. Bateria 5Ah trzyma tak, że zapomnisz gdzie masz ładowarkę.',
+    ARRAY['Silnik bezszczotkowy 70 Nm – idzie w dąb jak w masło', 'W zestawie 2 potężne akumulatory 5.0 Ah', 'Walizka systemowa TSTAK w komplecie'],
+    ARRAY['Ciężka z baterią 5Ah', 'Sąsiedzi będą chcieli ciągle pożyczać'],
+    1199.00, 789.00, 789.00, 'SZWAGIER10', 'https://allegro.pl',
+    'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80',
+    'Allegro / Oficjalny Dystrybutor', 'POLECENIE_SZWAGRA', 342, 89, 2, false, true
+),
+(
+    '22222222-2222-2222-2222-222222222222',
+    'Akumulatorowy klucz udarowy Parkside Performance PASSP 20-Li A3 (1898 Nm luzowania!)',
+    'parkside-performance-klucz-udarowy-1898nm',
+    'Czarna seria Performance z Lidla. Bestia z momentem zrywającym prawie 1900 Nm. Odkręca zapieczone śruby w kołach busa i traktorze.',
+    'Każdy się śmieje z Parkside dopóki nie zobaczy czarnej serii Performance. Wulkanizator chciał mi pourywać szpilki w Passacie, wziąłem tego potwora i śruba puściła w sekundę.',
+    ARRAY['Potężny moment zrywający – nie ma śruby, która nie puści', 'Silnik bezszczotkowy', '5 lat gwarancji producenta'],
+    ARRAY['Szybko znika z półek w sklepie online', 'Wymaga mocnego aku min. 4Ah'],
+    499.00, 299.00, 299.00, 'LIDLPLUS', 'https://lidl.pl',
+    'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80',
+    'Lidl Sklep Online', 'CEBULA_DEAL', 489, 142, 6, false, true
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Przypisanie do wielu kategorii (M:N)
+INSERT INTO public.deal_categories (deal_id, category_id) VALUES
+('11111111-1111-1111-1111-111111111111', 'narzedzia'),
+('22222222-2222-2222-2222-222222222222', 'motoryzacja'),
+('22222222-2222-2222-2222-222222222222', 'narzedzia')
+ON CONFLICT (deal_id, category_id) DO NOTHING;
+
+-- Historia cen (Omnibus)
+INSERT INTO public.deal_price_history (deal_id, price, recorded_at) VALUES
+('11111111-1111-1111-1111-111111111111', 1199.00, NOW() - INTERVAL '25 days'),
+('11111111-1111-1111-1111-111111111111', 899.00, NOW() - INTERVAL '10 days'),
+('11111111-1111-1111-1111-111111111111', 789.00, NOW() - INTERVAL '1 day'),
+('22222222-2222-2222-2222-222222222222', 499.00, NOW() - INTERVAL '20 days'),
+('22222222-2222-2222-2222-222222222222', 299.00, NOW() - INTERVAL '2 hours');
