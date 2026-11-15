@@ -157,6 +157,11 @@ export default function DealDetailPage() {
                       Cena regularna: {formatPrice(deal.original_price)}
                     </div>
                   )}
+                  {deal.lowest_price_30_days && (
+                    <div className="text-xs text-slate-400 font-medium mt-1">
+                      Najniższa z 30 dni (Omnibus): <strong className="text-slate-200">{formatPrice(deal.lowest_price_30_days)}</strong>
+                    </div>
+                  )}
                 </div>
 
                 {deal.original_price && deal.original_price > deal.deal_price && (

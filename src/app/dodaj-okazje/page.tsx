@@ -5,21 +5,25 @@ import Link from 'next/link';
 import { PlusCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { CATEGORIES } from '@/data/mock-deals';
 
+const initialFormState = {
+  title: '',
+  category_id: 'narzedzia',
+  category_ids: ['narzedzia'],
+  deal_url: '',
+  store_name: '',
+  original_price: '',
+  deal_price: '',
+  lowest_price_30_days: '',
+  coupon_code: '',
+  image_url: '',
+  szwagier_verdict: '',
+  pros: '',
+  cons: '',
+  badge: 'POLECENIE_SZWAGRA',
+};
+
 export default function AddDealPage() {
-  const [formData, setFormData] = useState({
-    title: '',
-    category_id: 'narzedzia',
-    deal_url: '',
-    store_name: '',
-    original_price: '',
-    deal_price: '',
-    coupon_code: '',
-    image_url: '',
-    szwagier_verdict: '',
-    pros: '',
-    cons: '',
-    badge: 'POLECENIE_SZWAGRA',
-  });
+  const [formData, setFormData] = useState(initialFormState);
 
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,20 +54,7 @@ export default function AddDealPage() {
           <button
             onClick={() => {
               setSubmitted(false);
-              setFormData({
-                title: '',
-                category_id: 'narzedzia',
-                deal_url: '',
-                store_name: '',
-                original_price: '',
-                deal_price: '',
-                coupon_code: '',
-                image_url: '',
-                szwagier_verdict: '',
-                pros: '',
-                cons: '',
-                badge: 'POLECENIE_SZWAGRA',
-              });
+              setFormData(initialFormState);
             }}
             className="px-6 py-3 rounded-xl bg-slate-800 text-slate-100 text-sm font-bold hover:bg-slate-700 border border-slate-600"
           >
@@ -130,20 +121,41 @@ export default function AddDealPage() {
         </div>
 
         {/* Category & Store */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-slate-200 mb-2">Kategoria *</label>
-            <select
-              value={formData.category_id}
-              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-white focus:outline-none focus:border-amber-400"
-            >
-              {CATEGORIES.filter((c) => c.id !== 'wszystkie').map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-bold text-slate-200 mb-2">
+              Kategorie sprzętu (wybierz jedną lub więcej) *
+            </label>
+            <div className="flex flex-wrap gap-2.5">
+              {CATEGORIES.filter((c) => c.id !== 'wszystkie').map((cat) => {
+                const isSelected = formData.category_ids.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      const exists = formData.category_ids.includes(cat.id);
+                      const updated = exists
+                        ? formData.category_ids.filter((c) => c !== cat.id)
+                        : [...formData.category_ids, cat.id];
+                      setFormData({
+                        ...formData,
+                        category_ids: updated.length ? updated : [cat.id],
+                        category_id: updated[0] || cat.id,
+                      });
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                      isSelected
+                        ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md'
+                        : 'bg-slate-950 text-slate-300 border-slate-700 hover:border-slate-500'
+                    }`}
+                  >
+                    {isSelected ? '✓ ' : '+ '}
+                    {cat.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>
@@ -160,7 +172,7 @@ export default function AddDealPage() {
         </div>
 
         {/* Prices & Coupon */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div>
             <label className="block text-sm font-bold text-slate-200 mb-2">Cena w promocji (zł) *</label>
             <input
@@ -187,7 +199,19 @@ export default function AddDealPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-slate-200 mb-2">Kod rabatowy (jeśli jest)</label>
+            <label className="block text-sm font-bold text-slate-200 mb-2">Cena z 30 dni (Omnibus)</label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="np. 450.00"
+              value={formData.lowest_price_30_days}
+              onChange={(e) => setFormData({ ...formData, lowest_price_30_days: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-200 mb-2">Kod rabatowy</label>
             <input
               type="text"
               placeholder="np. RABAT10"

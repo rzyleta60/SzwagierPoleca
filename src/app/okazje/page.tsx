@@ -19,9 +19,10 @@ function DealsContent() {
 
   const filteredDeals = useMemo(() => {
     return MOCK_DEALS.filter((deal) => {
-      // Category match
-      if (selectedCategory !== 'wszystkie' && deal.category_id !== selectedCategory) {
-        return false;
+      // Category match (wspiera relację M:N - jeden produkt w wielu kategoriach)
+      if (selectedCategory !== 'wszystkie') {
+        const inCategories = deal.category_ids?.includes(selectedCategory) || deal.category_id === selectedCategory;
+        if (!inCategories) return false;
       }
       // Search query match
       if (searchQuery.trim()) {

@@ -14,7 +14,10 @@ export function HomeDealsSection() {
     let deals = [...MOCK_DEALS];
 
     if (selectedCategory !== 'wszystkie') {
-      deals = deals.filter((d) => d.category_id === selectedCategory);
+      deals = deals.filter((d) => 
+        d.category_id === selectedCategory || 
+        d.category_ids?.includes(selectedCategory)
+      );
     }
 
     if (sortBy === 'hot') {

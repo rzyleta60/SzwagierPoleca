@@ -11,6 +11,7 @@ import {
   ArrowRight,
   CreditCard
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function VipPage() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -21,12 +22,28 @@ export default function VipPage() {
       setLoadingPlan(plan.id);
       setError(null);
 
+      // Pobierz aktualnego użytkownika z Supabase jeśli jest zalogowany
+      let currentUserId = undefined;
+      let currentUserEmail = undefined;
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          currentUserId = user.id;
+          currentUserEmail = user.email;
+        }
+      } catch (authErr) {
+        // Użytkownik niezalogowany
+      }
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           priceId: plan.priceId,
           planName: plan.name,
+          userId: currentUserId,
+          userEmail: currentUserEmail,
         }),
       });
 

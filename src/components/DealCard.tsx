@@ -128,6 +128,11 @@ export function DealCard({ deal }: DealCardProps) {
             <div className="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight">
               {formatPrice(deal.deal_price)}
             </div>
+            {deal.lowest_price_30_days && (
+              <span className="block text-[11px] text-slate-400 font-medium mt-0.5">
+                Najniższa z 30 dni: <strong className="text-slate-200 font-bold">{formatPrice(deal.lowest_price_30_days)}</strong>
+              </span>
+            )}
           </div>
 
           <VoteButtons

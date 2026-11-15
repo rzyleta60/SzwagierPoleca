@@ -1,6 +1,6 @@
 -- ====================================================================
 -- SCHEMA BAZY DANYCH: szwagierpoleca.pl (PostgreSQL / Supabase)
--- ZAKTUALIZOWANA ARCHITEKTURA BAZY DANYCH
+-- ZWERYFIKOWANA I ZOPTYMALIZOWANA ARCHITEKTURA BAZY DANYCH
 -- ====================================================================
 
 -- 1. TABELA KATEGORII
@@ -12,27 +12,10 @@ CREATE TABLE IF NOT EXISTS public.categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. TABELA PROFILI / UŻYTKOWNIKÓW (Główna samodzielna tabela użytkowników)
--- Zawiera email, hasło (hash) oraz ID aktywnej subskrypcji
-CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL, -- bezpieczny hash hasła użytkownika
-    username TEXT UNIQUE NOT NULL,
-    full_name TEXT,
-    avatar_url TEXT,
-    stripe_customer_id TEXT,
-    active_subscription_id TEXT, -- powiązanie po ID ze subskrypcją Stripe
-    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'szwagier_admin')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 3. TABELA SUBSKRYPCJI STRIPE (Klub Szwagra VIP)
--- Bezpośrednie powiązanie po ID użytkownika (user_id -> profiles.id)
+-- 2. TABELA SUBSKRYPCJI STRIPE (Tworzymy najpierw, aby powiązać z profiles)
 CREATE TABLE IF NOT EXISTS public.subscriptions (
     id TEXT PRIMARY KEY, -- identyfikator Stripe: sub_...
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL, -- powiązanie po ID z profiles.id (FK dodany niżej)
     status TEXT NOT NULL CHECK (status IN ('active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete')),
     price_id TEXT NOT NULL, -- identyfikator planu: price_...
     cancel_at_period_end BOOLEAN DEFAULT false,
@@ -42,17 +25,32 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Dodanie klucza obcego w tabeli profiles wskazującego na aktualną subskrypcję
-ALTER TABLE public.profiles 
-    DROP CONSTRAINT IF EXISTS fk_profiles_active_subscription;
+-- 3. TABELA PROFILI / UŻYTKOWNIKÓW
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT, -- opcjonalny hash dla logowania hasłem lub OAuth / Magic Link
+    username TEXT UNIQUE NOT NULL,
+    full_name TEXT,
+    avatar_url TEXT,
+    stripe_customer_id TEXT,
+    active_subscription_id TEXT REFERENCES public.subscriptions(id) ON DELETE SET NULL, -- powiązanie po ID
+    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'szwagier_admin')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
-ALTER TABLE public.profiles
-    ADD CONSTRAINT fk_profiles_active_subscription
-    FOREIGN KEY (active_subscription_id) 
-    REFERENCES public.subscriptions(id) 
-    ON DELETE SET NULL;
+-- Dodanie klucza obcego dla subscriptions.user_id wskazującego na profiles.id
+ALTER TABLE public.subscriptions 
+    DROP CONSTRAINT IF EXISTS fk_subscriptions_user;
 
--- 4. TABELA ZAMÓWIEŃ (Nowa tabela zakupów, planów VIP i produktów)
+ALTER TABLE public.subscriptions
+    ADD CONSTRAINT fk_subscriptions_user
+    FOREIGN KEY (user_id) 
+    REFERENCES public.profiles(id) 
+    ON DELETE CASCADE;
+
+-- 4. TABELA ZAMÓWIEŃ (Zakupy, plany VIP i produkty)
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -60,11 +58,11 @@ CREATE TABLE IF NOT EXISTS public.orders (
     total_amount NUMERIC(10, 2) NOT NULL,
     currency TEXT DEFAULT 'PLN',
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'refunded', 'cancelled')),
-    payment_method TEXT DEFAULT 'stripe', -- stripe_card, blik, apple_pay, etc.
+    payment_method TEXT DEFAULT 'stripe', -- stripe_card, blik, apple_pay itp.
     stripe_checkout_session_id TEXT,
     stripe_payment_intent_id TEXT,
     subscription_id TEXT REFERENCES public.subscriptions(id) ON DELETE SET NULL,
-    items JSONB NOT NULL DEFAULT '[]'::jsonb, -- szczegóły zamówionych pozycji (tytuł, cena, ilość)
+    items JSONB NOT NULL DEFAULT '[]'::jsonb, -- lista pozycji
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -93,8 +91,8 @@ CREATE TABLE IF NOT EXISTS public.deals (
     deal_url TEXT NOT NULL,
     image_url TEXT NOT NULL,
     store_name TEXT NOT NULL,
-    badge TEXT DEFAULT 'POLECENIE_SZWAGRA', -- 'POLECENIE_SZWAGRA', 'CEBULA_DEAL', 'WOL_ROBOCZY', 'BLAD_CENOWY'
-    temperature INTEGER DEFAULT 100,       -- Stopnie gorącości oferty (np. 150°C)
+    badge TEXT DEFAULT 'POLECENIE_SZWAGRA',
+    temperature INTEGER DEFAULT 100,       -- Stopnie gorącości oferty (°C)
     upvotes INTEGER DEFAULT 0,
     downvotes INTEGER DEFAULT 0,
     is_vip_only BOOLEAN DEFAULT false,
@@ -104,7 +102,6 @@ CREATE TABLE IF NOT EXISTS public.deals (
 );
 
 -- 6. TABELA ŁĄCZĄCA: DEALS <-> CATEGORIES (Relacja Wiele-do-Wielu / M:N)
--- Jeden produkt może należeć do wielu kategorii jednocześnie (np. klucz udarowy: Narzędzia + Motoryzacja)
 CREATE TABLE IF NOT EXISTS public.deal_categories (
     deal_id UUID NOT NULL REFERENCES public.deals(id) ON DELETE CASCADE,
     category_id TEXT NOT NULL REFERENCES public.categories(id) ON DELETE CASCADE,
@@ -112,8 +109,7 @@ CREATE TABLE IF NOT EXISTS public.deal_categories (
     PRIMARY KEY (deal_id, category_id)
 );
 
--- 7. SUB-TABELA: HISTORIA CEN Z OSTATNICH 30 DNI (Sub-tabela do deals)
--- Śledzenie zmian cen i realizacja wymogów dyrektywy Omnibus
+-- 7. SUB-TABELA: HISTORIA CEN Z OSTATNICH 30 DNI
 CREATE TABLE IF NOT EXISTS public.deal_price_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     deal_id UUID NOT NULL REFERENCES public.deals(id) ON DELETE CASCADE,
@@ -121,11 +117,10 @@ CREATE TABLE IF NOT EXISTS public.deal_price_history (
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Indeks do błyskawicznego odpytywania historii cen z ostatnich 30 dni
 CREATE INDEX IF NOT EXISTS idx_deal_price_history_30d 
     ON public.deal_price_history (deal_id, recorded_at DESC);
 
--- Trigger aktualizujący najniższą cenę z ostatnich 30 dni w tabeli deals
+-- Trigger aktualizujący najniższą cenę z ostatnich 30 dni w tabeli deals (Omnibus)
 CREATE OR REPLACE FUNCTION public.update_deal_lowest_price_30d()
 RETURNS trigger AS $$
 BEGIN
@@ -165,6 +160,60 @@ CREATE TABLE IF NOT EXISTS public.comments (
 );
 
 -- ====================================================================
+-- PROCEDURY SKŁADOWANE RPC (Wymagane przez backend Next.js)
+-- ====================================================================
+
+-- 1. Zwiększenie głosu "Warto" + temperatura
+CREATE OR REPLACE FUNCTION public.increment_upvotes(deal_id UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE public.deals
+    SET upvotes = upvotes + 1,
+        temperature = temperature + 5
+    WHERE id = deal_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2. Zwiększenie głosu "Nie warto" - temperatura
+CREATE OR REPLACE FUNCTION public.increment_downvotes(deal_id UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE public.deals
+    SET downvotes = downvotes + 1,
+        temperature = GREATEST(0, temperature - 5)
+    WHERE id = deal_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Automatyczne tworzenie profilu przy rejestracji w Supabase Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, username, full_name, avatar_url)
+  VALUES (
+    new.id,
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    COALESCE(new.raw_user_meta_data->>'full_name', 'Szwagier'),
+    new.raw_user_meta_data->>'avatar_url'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Podpięcie triggera do auth.users w Supabase (jeśli istnieje)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'auth' AND tablename = 'users') THEN
+        DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+        CREATE TRIGGER on_auth_user_created
+            AFTER INSERT ON auth.users
+            FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+    END IF;
+END $$;
+
+-- ====================================================================
 -- BEZPIECZEŃSTWO: ROW LEVEL SECURITY (RLS)
 -- ====================================================================
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -178,24 +227,16 @@ ALTER TABLE public.votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
 -- POLITYKI RLS:
--- Kategorie i powiązania: Odczyt dla wszystkich
 CREATE POLICY "Kategorie są publiczne" ON public.categories FOR SELECT USING (true);
 CREATE POLICY "Powiązania kategorii są publiczne" ON public.deal_categories FOR SELECT USING (true);
-
--- Profile: Każdy widzi profile publiczne, edycja własnego konta
 CREATE POLICY "Profile są widoczne publicznie" ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Użytkownik edytuje swój profil" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
--- Subskrypcje: Użytkownik widzi wyłącznie swoją subskrypcję (po ID)
 CREATE POLICY "Użytkownik widzi swoje subskrypcje" ON public.subscriptions FOR SELECT USING (user_id = auth.uid());
-
--- Zamówienia: Użytkownik widzi wyłącznie swoje zamówienia (po ID)
 CREATE POLICY "Użytkownik widzi swoje zamówienia" ON public.orders FOR SELECT USING (user_id = auth.uid());
-
--- Historia cen: Dostępna publicznie (wykresy cen, Omnibus)
 CREATE POLICY "Historia cen jest publiczna" ON public.deal_price_history FOR SELECT USING (true);
 
--- Okazje: Publiczny odczyt dla ofert zwykłych, oferty VIP tylko z aktywną subskrypcją połączoną po ID
+-- Dostęp do okazji: publiczny dla ogólnych, dla VIP sprawdzany po powiązaniu ID w subscriptions
 CREATE POLICY "Okazje widoczne dla uprawnionych" ON public.deals FOR SELECT USING (
     is_vip_only = false OR 
     EXISTS (
@@ -205,7 +246,6 @@ CREATE POLICY "Okazje widoczne dla uprawnionych" ON public.deals FOR SELECT USIN
     )
 );
 
--- Głosy i komentarze
 CREATE POLICY "Głosy są widoczne" ON public.votes FOR SELECT USING (true);
 CREATE POLICY "Zalogowani mogą głosować" ON public.votes FOR ALL USING (user_id = auth.uid());
 
@@ -213,7 +253,7 @@ CREATE POLICY "Komentarze są widoczne" ON public.comments FOR SELECT USING (tru
 CREATE POLICY "Zalogowani mogą komentować" ON public.comments FOR INSERT WITH CHECK (user_id = auth.uid());
 
 -- ====================================================================
--- DANE POCZĄTKOWE (SEED DATA)
+-- PRZYKŁADOWE KATEGORIE POCZĄTKOWE
 -- ====================================================================
 INSERT INTO public.categories (id, name, description, icon) VALUES
 ('narzedzia', 'Narzędzia i Warsztat', 'Wkrętarki, młotowiertarki, klucze i sprzęt do garażu', 'Wrench'),
