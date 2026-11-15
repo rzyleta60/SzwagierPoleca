@@ -23,20 +23,34 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username: username.trim() || email.split('@')[0],
-            full_name: username.trim(),
-          },
-        },
+      // Rejestracja przez endpoint serwerowy (omija limit wysyłki e-maili Supabase SMTP)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          username,
+        }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
 
-      setSuccess(true);
+      if (!res.ok) {
+        throw new Error(data.error || 'Wystąpił błąd podczas rejestracji.');
+      }
+
+      // Automatyczne natychmiastowe logowanie
+      const { error: loginErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (!loginErr) {
+        window.location.href = '/konto';
+      } else {
+        setSuccess(true);
+      }
     } catch (err: any) {
       setError(err.message || 'Wystąpił błąd podczas rejestracji.');
     } finally {
@@ -50,13 +64,13 @@ export default function RegisterPage() {
         <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
           <CheckCircle2 className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-black text-white mb-2">Sprawdź swoją skrzynkę e-mail!</h2>
-        <p className="text-xs text-slate-300 mb-6 leading-relaxed">
-          Wysłaliśmy link potwierdzający rejestrację na adres <strong>{email}</strong>. Kliknij go, aby aktywować konto w Klubie Szwagra.
+        <h2 className="text-2xl font-black text-white mb-2">Konto zostało pomyślnie utworzone!</h2>
+        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+          Możesz się teraz zalogować za pomocą swojego adresu e-mail: <strong>{email}</strong>.
         </p>
         <Link
           href="/auth/login"
-          className="inline-block px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400"
+          className="inline-block px-6 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-sm hover:bg-amber-400 transition"
         >
           Przejdź do logowania
         </Link>
@@ -79,7 +93,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold">
+          <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-bold leading-relaxed">
             {error}
           </div>
         )}
@@ -107,7 +121,7 @@ export default function RegisterPage() {
               <input
                 type="email"
                 required
-                placeholder="twoj.email@poczta.pl"
+                placeholder="twoj@email.pl"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
@@ -135,19 +149,33 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition"
+            className="w-full py-3.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 mt-2"
           >
-            <span>{loading ? 'Rejestracja...' : 'Zarejestruj konto'}</span>
-            <ArrowRight className="w-4 h-4" />
+            {loading ? (
+              <span className="animate-pulse">Tworzenie konta...</span>
+            ) : (
+              <>
+                <span>Zarejestruj się za darmo</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
+        {/* Security badge */}
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+          <span>Bezpieczna autoryzacja w bazie Supabase</span>
+        </div>
+
         {/* Footer */}
-        <div className="pt-4 border-t border-slate-800 text-center text-xs text-slate-400">
-          Masz już konto?{' '}
-          <Link href="/auth/login" className="text-amber-400 font-bold hover:underline">
-            Zaloguj się
-          </Link>
+        <div className="text-center pt-2 border-t border-slate-800">
+          <p className="text-xs text-slate-400">
+            Masz już konto?{' '}
+            <Link href="/auth/login" className="text-amber-400 font-bold hover:underline">
+              Zaloguj się
+            </Link>
+          </p>
         </div>
       </div>
     </div>
