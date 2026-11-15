@@ -23,7 +23,8 @@ import {
   Lock,
   Crown,
   ShieldCheck,
-  Zap
+  Zap,
+  ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -45,6 +46,45 @@ export default function DealDetailPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [isMarkingPurchased, setIsMarkingPurchased] = useState(false);
+  const [markedPurchased, setMarkedPurchased] = useState(false);
+
+  // Funkcja oznaczania okazji jako kupionej
+  const handleMarkAsPurchased = async () => {
+    if (!user || !deal) return;
+    setIsMarkingPurchased(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          totalAmount: deal.deal_price,
+          paymentMethod: `Sklep zewnętrzny (${deal.store_name})`,
+          items: [
+            {
+              id: deal.id,
+              name: deal.title,
+              price: deal.deal_price,
+              quantity: 1,
+              store: deal.store_name,
+              deal_url: deal.deal_url,
+              image_url: deal.image_url,
+              type: 'external_deal',
+            },
+          ],
+        }),
+      });
+
+      if (res.ok) {
+        setMarkedPurchased(true);
+      }
+    } catch (err) {
+      console.error('Błąd zapisu zakupu:', err);
+    } finally {
+      setIsMarkingPurchased(false);
+    }
+  };
 
   // Funkcja pobierania komentarzy z bazy danych
   const loadComments = async (silent = false) => {
@@ -443,6 +483,41 @@ export default function DealDetailPage() {
                     <span>Przejdź do oferty w sklepie ({deal.store_name})</span>
                     <ExternalLink className="w-5 h-5" />
                   </a>
+
+                  {/* Przycisk oznaczania zakupu w sklepie partnerskim */}
+                  {user ? (
+                    <button
+                      type="button"
+                      onClick={handleMarkAsPurchased}
+                      disabled={isMarkingPurchased || markedPurchased}
+                      className={`w-full py-3.5 px-5 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 border transition-all ${
+                        markedPurchased
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 cursor-default'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 hover:border-amber-400'
+                      }`}
+                    >
+                      {markedPurchased ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>Kupione! Zapisano w historii Twojego konta (/konto)</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag className="w-4 h-4 text-amber-400" />
+                          <span>
+                            {isMarkingPurchased ? 'Zapisywanie w Twoim profilu...' : 'Kupiłeś ten sprzęt? Oznacz jako kupione'}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/auth/login"
+                      className="block text-center text-xs text-slate-400 hover:text-amber-400 transition pt-1"
+                    >
+                      💡 Zaloguj się, aby móc oznaczać kupione okazje i widzieć je w swoim profilu.
+                    </Link>
+                  )}
 
                   <p className="text-xs sm:text-sm text-slate-400 text-center font-medium">
                     Link przekierowuje bezpośrednio do sprawdzonego sprzedawcy.

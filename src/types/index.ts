@@ -68,9 +68,14 @@ export interface Subscription {
 }
 
 export interface OrderItem {
+  id?: string;
   name: string;
   price: number;
   quantity: number;
+  store?: string;
+  image_url?: string;
+  deal_url?: string;
+  type?: string;
 }
 
 export interface Order {

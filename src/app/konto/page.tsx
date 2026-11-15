@@ -286,7 +286,7 @@ export default function AccountPage() {
               <Package className="w-12 h-12 text-slate-600 mx-auto" />
               <h3 className="text-lg font-bold text-white">Brak zamówień na tym koncie</h3>
               <p className="text-slate-400 text-sm max-w-md mx-auto">
-                Nie złożyłeś jeszcze żadnego zamówienia. Dołącz do Klubu VIP lub wybierz okazje ze zniżką warsztatową.
+                Nie masz jeszcze zapisanych zamówień. Możesz aktywować Klub VIP lub wejść w dowolną okazję i po udanym zakupie w sklepie kliknąć <strong>„Kupiłem ten sprzęt”</strong>, aby zapisać go w historii.
               </p>
               <button
                 onClick={() => handleTestVipToggle(true)}
@@ -350,12 +350,41 @@ export default function AccountPage() {
                           key={idx}
                           className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-950 border border-slate-800"
                         >
-                          <div className="flex items-center gap-3">
-                            <Package className="w-4 h-4 text-amber-400 shrink-0" />
-                            <span className="text-sm font-extrabold text-slate-200">{item.name}</span>
-                            <span className="text-xs text-slate-400 font-bold">x{item.quantity}</span>
+                          <div className="flex items-center gap-3.5">
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="w-11 h-11 object-cover rounded-xl border border-slate-800 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                                <Package className="w-5 h-5 text-amber-400" />
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-sm font-extrabold text-slate-200 block">{item.name}</span>
+                              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                {item.store && (
+                                  <span className="text-[11px] font-bold text-amber-400">
+                                    Sklep: {item.store}
+                                  </span>
+                                )}
+                                <span className="text-[11px] text-slate-400 font-bold">x{item.quantity}</span>
+                                {item.deal_url && (
+                                  <a
+                                    href={item.deal_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[11px] text-slate-400 hover:text-white underline ml-1"
+                                  >
+                                    Strona oferty ↗
+                                  </a>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-sm font-black text-slate-100">
+                          <span className="text-sm font-black text-slate-100 shrink-0">
                             {formatPrice(item.price * item.quantity)}
                           </span>
                         </div>
