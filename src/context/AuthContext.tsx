@@ -12,6 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  toggleTestVip: (enable: boolean, planId?: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
+  toggleTestVip: async () => false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -28,6 +30,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isVip, setIsVip] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const checkLocalTestVip = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('szwagier_test_vip') === 'true';
+    }
+    return false;
+  };
 
   const fetchProfile = async (currentUser: User) => {
     try {
@@ -38,18 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', currentUser.id)
         .single();
 
+      const hasLocalTestVip = checkLocalTestVip();
+
       if (!error && data) {
         setProfile(data as UserProfile);
-        const vipStatus = Boolean(data.active_subscription_id || data.role === 'szwagier_admin');
+        const vipStatus = Boolean(data.active_subscription_id || data.role === 'szwagier_admin' || hasLocalTestVip);
         setIsVip(vipStatus);
       } else {
-        // Fallback: profil nie utworzony w bazie lub błąd
         setProfile(null);
-        setIsVip(false);
+        setIsVip(hasLocalTestVip);
       }
     } catch (err) {
       console.warn('Nie udało się pobrać profilu użytkownika:', err);
-      setIsVip(false);
+      setIsVip(checkLocalTestVip());
     }
   };
 
@@ -62,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchProfile(currentUser);
       } else {
         setProfile(null);
-        setIsVip(false);
+        setIsVip(checkLocalTestVip());
       }
     } catch (err) {
       console.warn('Błąd podczas odświeżania profilu:', err);
@@ -71,8 +81,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const toggleTestVip = async (enable: boolean, planId?: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+
+      const response = await fetch('/api/vip/test-activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          action: enable ? 'activate' : 'deactivate',
+          planId,
+        }),
+      });
+
+      if (enable) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('szwagier_test_vip', 'true');
+        }
+        setIsVip(true);
+      } else {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('szwagier_test_vip');
+        }
+        setIsVip(false);
+      }
+
+      if (user) {
+        await fetchProfile(user);
+      }
+
+      return response.ok;
+    } catch (err) {
+      console.warn('Błąd w toggleTestVip, fallback lokalny:', err);
+      if (enable) {
+        if (typeof window !== 'undefined') localStorage.setItem('szwagier_test_vip', 'true');
+        setIsVip(true);
+      } else {
+        if (typeof window !== 'undefined') localStorage.removeItem('szwagier_test_vip');
+        setIsVip(false);
+      }
+      return true;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
+
+    if (checkLocalTestVip()) {
+      setIsVip(true);
+    }
 
     try {
       const supabase = createClient();
@@ -99,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await fetchProfile(currentUser);
         } else {
           setProfile(null);
-          setIsVip(false);
+          setIsVip(checkLocalTestVip());
         }
         setIsLoading(false);
       });
@@ -118,6 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('szwagier_test_vip');
+      }
       setUser(null);
       setProfile(null);
       setIsVip(false);
@@ -136,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         signOut,
         refreshProfile,
+        toggleTestVip,
       }}
     >
       {children}

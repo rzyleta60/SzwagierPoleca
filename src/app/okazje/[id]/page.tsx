@@ -31,7 +31,7 @@ import { createClient } from '@/lib/supabase/client';
 export default function DealDetailPage() {
   const params = useParams();
   const slugOrId = params.id as string;
-  const { user, profile, isVip } = useAuth();
+  const { user, profile, isVip, toggleTestVip } = useAuth();
 
   const [deal, setDeal] = useState<Deal | null>(() => {
     return MOCK_DEALS.find((d) => d.slug === slugOrId || d.id === slugOrId) || null;
@@ -154,13 +154,25 @@ export default function DealDetailPage() {
               </p>
             </div>
           </div>
-          <Link
-            href="/vip"
-            className="shrink-0 w-full md:w-auto px-7 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-base text-center shadow-xl shadow-amber-500/30 transition-all hover:scale-105 flex items-center justify-center gap-2"
-          >
-            <Crown className="w-5 h-5 text-slate-950" />
-            <span>Dołącz do VIP (od 19 zł)</span>
-          </Link>
+          <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={async () => {
+                await toggleTestVip(true);
+              }}
+              className="w-full sm:w-auto px-5 py-4 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/60 text-amber-300 font-black text-sm transition flex items-center justify-center gap-2 hover:scale-105"
+            >
+              <Zap className="w-4 h-4 fill-amber-300" />
+              <span>Odblokuj testowo (bez Stripe) ⚡</span>
+            </button>
+            <Link
+              href="/vip"
+              className="shrink-0 w-full sm:w-auto px-7 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-base text-center shadow-xl shadow-amber-500/30 transition-all hover:scale-105 flex items-center justify-center gap-2"
+            >
+              <Crown className="w-5 h-5 text-slate-950" />
+              <span>Dołącz do VIP (od 19 zł)</span>
+            </Link>
+          </div>
         </div>
       )}
 
@@ -275,13 +287,25 @@ export default function DealDetailPage() {
                         </span>
                       </div>
                     </div>
-                    <Link
-                      href="/vip"
-                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm text-center flex items-center justify-center gap-2 shadow-md transition"
-                    >
-                      <Crown className="w-4 h-4 text-slate-950" />
-                      <span>Odblokuj kod w VIP</span>
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await toggleTestVip(true);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-amber-300" />
+                        <span>Odkryj testowo</span>
+                      </button>
+                      <Link
+                        href="/vip"
+                        className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm text-center flex items-center justify-center gap-2 shadow-md transition"
+                      >
+                        <Crown className="w-4 h-4 text-slate-950" />
+                        <span>Odblokuj kod w VIP</span>
+                      </Link>
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-5 p-4 rounded-2xl bg-amber-500/10 border border-dashed border-amber-500/50 flex items-center justify-between gap-4">
@@ -323,14 +347,26 @@ export default function DealDetailPage() {
             <div className="space-y-3 pt-2">
               {isLockedForUser ? (
                 <div className="space-y-3">
-                  <Link
-                    href="/vip"
-                    className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-base flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.01]"
-                  >
-                    <Lock className="w-5 h-5 text-slate-950" />
-                    <span>Odblokuj bezpośredni link do oferty w Klubie VIP</span>
-                    <Crown className="w-5 h-5 text-slate-950" />
-                  </Link>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Link
+                      href="/vip"
+                      className="flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-base flex items-center justify-center gap-2.5 shadow-xl shadow-amber-500/25 transition-all hover:scale-[1.01]"
+                    >
+                      <Lock className="w-5 h-5 text-slate-950" />
+                      <span>Odblokuj w Klubie VIP</span>
+                      <Crown className="w-5 h-5 text-slate-950" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await toggleTestVip(true);
+                      }}
+                      className="py-4 px-6 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-amber-400/50 text-amber-300 font-black text-sm flex items-center justify-center gap-2 transition"
+                    >
+                      <Zap className="w-4 h-4 fill-amber-300" />
+                      <span>Kup testowo bez Stripe ⚡</span>
+                    </button>
+                  </div>
 
                   <p className="text-xs sm:text-sm text-slate-400 text-center font-medium">
                     Bezpośrednie linki i kody do okazji VIP są zastrzeżone dla aktywnych członków Klubu Szwagra.
