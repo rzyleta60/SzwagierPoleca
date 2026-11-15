@@ -43,6 +43,46 @@ export default function DealDetailPage() {
   const [newComment, setNewComment] = useState('');
   const [authorName, setAuthorName] = useState(profile?.username || user?.user_metadata?.username || '');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  // Funkcja pobierania komentarzy z bazy danych
+  const loadComments = async (silent = false) => {
+    const targetDealId = deal?.id || slugOrId;
+    if (!targetDealId) return;
+
+    if (!silent) setIsLoadingComments(true);
+    try {
+      const res = await fetch(`/api/comments?dealId=${encodeURIComponent(targetDealId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.comments && Array.isArray(data.comments)) {
+          setComments(data.comments);
+        }
+      }
+    } catch (err) {
+      console.error('Błąd pobierania komentarzy:', err);
+    } finally {
+      if (!silent) setIsLoadingComments(false);
+    }
+  };
+
+  useEffect(() => {
+    loadComments();
+
+    // Auto-odświeżanie komentarzy co 10 sekund (pozwala widzieć nowe komentarze od innych użytkowników w czasie rzeczywistym)
+    const interval = setInterval(() => {
+      loadComments(true);
+    }, 10000);
+
+    const onFocus = () => loadComments(true);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [deal?.id, slugOrId]);
 
   useEffect(() => {
     // Sprawdź czy okazja istnieje w Supabase (dla nowo dodanych okazji)
@@ -99,26 +139,46 @@ export default function DealDetailPage() {
     }
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
 
-    setIsSubmittingComment(true);
-    const addedComment: Comment = {
-      id: `c_${Date.now()}`,
-      deal_id: deal.id,
-      user_id: user?.id || 'local_user',
-      username: authorName.trim() || profile?.username || 'Majster_Garażowy',
-      is_vip: isVip,
-      content: newComment.trim(),
-      created_at: new Date().toISOString(),
-    };
+    const targetDealId = deal.id || slugOrId;
+    const author = authorName.trim() || profile?.username || user?.user_metadata?.username || 'Majster_Garażowy';
 
-    setTimeout(() => {
-      setComments([addedComment, ...comments]);
+    setIsSubmittingComment(true);
+    setCommentError(null);
+
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dealId: targetDealId,
+          content: newComment.trim(),
+          username: author,
+          isVip: isVip,
+          userId: user?.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Nie udało się zapisać komentarza.');
+      }
+
+      if (data.comment) {
+        setComments((prev) => [data.comment, ...prev.filter((c) => c.id !== data.comment.id)]);
+      }
+
       setNewComment('');
+    } catch (err: any) {
+      console.error('Błąd dodawania komentarza:', err);
+      setCommentError(err.message || 'Wystąpił błąd podczas dodawania komentarza.');
+    } finally {
       setIsSubmittingComment(false);
-    }, 400);
+    }
   };
 
   return (
@@ -495,6 +555,12 @@ export default function DealDetailPage() {
 
         {/* Comment form */}
         <form onSubmit={handleAddComment} className="p-6 rounded-2xl bg-slate-950 border border-slate-700 space-y-4">
+          {commentError && (
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs sm:text-sm font-semibold">
+              {commentError}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
               type="text"
@@ -516,21 +582,26 @@ export default function DealDetailPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span className="text-xs sm:text-sm text-slate-400 font-medium">
-              Komentarze są moderowane pod kątem kultury i spamu.
+              Komentarze są widoczne dla wszystkich Szwagrów w czasie rzeczywistym.
             </span>
             <button
               type="submit"
               disabled={isSubmittingComment}
-              className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition"
+              className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
-              <span>Dodaj komentarz</span>
+              <span>{isSubmittingComment ? 'Zapisywanie...' : 'Dodaj komentarz'}</span>
             </button>
           </div>
         </form>
 
         {/* List of comments */}
         <div className="space-y-4 pt-2">
+          {comments.length === 0 && !isLoadingComments && (
+            <div className="p-8 text-center bg-slate-950 border border-slate-800 rounded-2xl text-slate-400 text-sm">
+              Brak komentarzy. Bądź pierwszym Szwagrem, który wyrazi swoją opinię!
+            </div>
+          )}
           {comments.map((comment) => (
             <div
               key={comment.id}
